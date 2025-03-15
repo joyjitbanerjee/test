@@ -1,0 +1,55 @@
+flowchart TD
+    subgraph User Authentication
+        Start([Start]) --> Login[/Login via AWS IAM/]
+        Login --> Verify{Verify Credentials}
+        Verify -->|Invalid| RetryAuth[Show Error]
+        RetryAuth --> Login
+        Verify -->|Valid| Roles[Check IAM Roles]
+    end
+
+    subgraph Account Selection
+        Roles --> AccountType{Deployment Type}
+        AccountType -->|Single Account| SingleSetup[Configure Single Account]
+        AccountType -->|Multi Account| OrgSetup[Configure AWS Organizations]
+    end
+
+    subgraph Configuration
+        SingleSetup --> Standards[Select Standards]
+        OrgSetup --> Standards
+        Standards --> ISO27701[ISO 27701 Controls]
+        Standards --> ISO27018[ISO 27018 Controls]
+        
+        ISO27701 --> Rules[AWS Config Rules]
+        ISO27018 --> Rules
+        
+        Rules --> CustomRules[Custom Rules Required?]
+        CustomRules -->|Yes| CreateLambda[Create Lambda Functions]
+        CustomRules -->|No| UseManaged[Use Managed Rules]
+        
+        CreateLambda --> GenYAML[Generate YAML]
+        UseManaged --> GenYAML
+    end
+
+    subgraph Deployment
+        GenYAML --> Validate{Validate Template}
+        Validate -->|Invalid| FixErrors[Fix Template Errors]
+        FixErrors --> GenYAML
+        
+        Validate -->|Valid| DeployType{Deployment Choice}
+        DeployType -->|Download| SaveYAML[Save YAML File]
+        DeployType -->|Deploy| InitDeploy[Initialize Deployment]
+        
+        InitDeploy --> CheckPerms{Check Permissions}
+        CheckPerms -->|Missing| SetupIAM[Setup IAM Roles]
+        SetupIAM --> InitDeploy
+        
+        CheckPerms -->|Valid| DeployPack[Deploy Conformance Pack]
+        DeployPack --> Monitor[Setup CloudWatch Monitoring]
+    end
+
+    subgraph Monitoring
+        Monitor --> Reports[Setup Compliance Reports]
+        Reports --> S3Store[Store in S3]
+        S3Store --> Notify[Setup SNS Notifications]
+        Notify --> End([Complete])
+    end
